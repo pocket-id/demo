@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" type="text/css"  href="/demo-kuma/main.css" />
+    <script defer src="https://analytics.eliasschneider.com/script.js" data-website-id="2186999d-bb84-4465-ad91-39ab36952144"></script>
 </head>
 <body>
 
@@ -13,11 +14,13 @@
 
     <div class="main" v-if="!iframeSrc">
         <div class="entry"  v-if="showEntry">
-            <h2><%= websiteName %></h2>
+            <img src="/demo-kuma/logo.svg" alt="<%= websiteName %>" class="logo" />
+            <h2><%= websiteName %></h2>           
             <p class="mt-4">
-                This is a demo of <%= websiteName %>. You can use this demo to try out the software before installing it on your own server.
+                You can use this demo to try out <%= websiteName %> before installing it on your own server. <br>
+                The timer on on the bottom will show you how much time you have left.
             </p>
-            <button class="btn btn-primary btn-big" @click="start">Start Demo</button>
+            <button class="btn btn-primary btn-big mt-3" @click="start" data-umami-event="Start Demo Button">Start Demo</button>
         </div>
 
         <div v-if="showEnd">
@@ -38,7 +41,7 @@
         {{ countdown }} <a href="<%= installURL %>" target="_blank">Install now</a>
     </div>
 
-    <iframe :src="iframeSrc" v-if="iframeSrc"></iframe>
+    <iframe allow="publickey-credentials-get; publickey-credentials-create" :src="iframeSrc" v-if="iframeSrc"></iframe>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.2/vue.global.prod.min.js"></script>
@@ -65,9 +68,12 @@
         },
         async mounted() {
             console.info("Mounted");
-
-            // If session-id cookie is set, we can skip the entry screen
-            if (document.cookie.indexOf("session-id") !== -1) {
+            const sessionSubDomain = window.location.host?.split(".")[0]
+            // If session-id is set, we can skip the entry screen
+            if (sessionSubDomain.startsWith("demo-")) {
+                if(window.location.search.includes("endSessionTime")) {
+                    localStorage.setItem("endSessionTime", new URLSearchParams(window.location.search).get("endSessionTime"));
+                }
                 // Check if the session-id is still valid
                 try {
                     let res = await fetch("/demo-kuma/validate-session");
@@ -76,8 +82,9 @@
                         this.showEntry = false;
                         this.iframeSrc = entryPath;
                         this.startTimer();
+
                     } else {
-                        this.entryAction();
+                        window.location.href = window.location.origin.replace(`${sessionSubDomain}.`, "");
                     }
                 } catch (e) {
                     this.entryAction();
@@ -107,12 +114,12 @@
                         this.loading = false;
                         this.iframeSrc = entryPath;
 
-                        localStorage.setItem("endSessionTime", obj.endSessionTime);
-                        this.startTimer();
+                       const {host, protocol} = window.location;
+                       window.location.href = `${protocol}//demo-${obj.sessionID}.${host}/demo-kuma/?endSessionTime=${obj.endSessionTime}`;
 
                     } else {
                         this.loading = false;
-                        alert("Error starting demo, please try again later.");
+                        alert(obj.error || "Error starting demo, please try again later.");
                         this.showEntry = true;
                     }
                 } catch (e) {
@@ -135,8 +142,6 @@
                 timer = setInterval(() => {
                     let now = Date.now();
                     let distance = endSessionTime - now;
-
-                    console.log(distance)
 
                     let minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)) + "";
                     let seconds = Math.floor((distance % (1000 * 60)) / 1000) + "";
