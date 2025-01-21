@@ -11,37 +11,22 @@
 <body>
 
 <div id="app" v-cloak>
-
-    <div class="main" v-if="!iframeSrc">
-        <div class="entry"  v-if="showEntry">
+    <div class="main" >
+        <div class="entry" v-if="showEntry">
             <img src="/demo-kuma/logo.svg" alt="<%= websiteName %>" class="logo" />
             <h2><%= websiteName %></h2>           
             <p class="mt-4">
                 You can use this demo to try out <%= websiteName %> before installing it on your own server. <br>
-                The timer on on the bottom will show you how much time you have left.
+                The demo will be available for 1 hour and will be deleted afterwards.
             </p>
             <button class="btn btn-primary btn-big mt-3" @click="start" data-umami-event="Start Demo Button">Start Demo</button>
         </div>
-
-        <div v-if="showEnd">
-            <h2>Demo has Ended</h2>
-            <p class="mt-4">
-                Your demo has ended, you can start a new demo by refreshing the page.
-            </p>
-            <a href="<%= installURL %>" class="btn btn-primary">Install now</a>
-        </div>
-
+     
         <div class="loading" v-if="loading">
             Preparing your demo, please wait...
         </div>
 
     </div>
-
-    <div class="fixed" v-if="showFixed">
-        {{ countdown }} <a href="<%= installURL %>" target="_blank">Install now</a>
-    </div>
-
-    <iframe allow="publickey-credentials-get; publickey-credentials-create" :src="iframeSrc" v-if="iframeSrc"></iframe>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.2/vue.global.prod.min.js"></script>
@@ -55,43 +40,16 @@
     createApp({
         data() {
             return {
-                showEntry: false,
                 loading: false,
-                iframeSrc: "",
-                countdown: "00:00",
-                showFixed: false,
-                showEnd: false,
+                showEntry: false,            
             }
         },
         computed: {
 
         },
         async mounted() {
-            console.info("Mounted");
             const sessionSubDomain = window.location.host?.split(".")[0]
-            // If session-id is set, we can skip the entry screen
-            if (sessionSubDomain.startsWith("demo-")) {
-                if(window.location.search.includes("endSessionTime")) {
-                    localStorage.setItem("endSessionTime", new URLSearchParams(window.location.search).get("endSessionTime"));
-                }
-                // Check if the session-id is still valid
-                try {
-                    let res = await fetch("/demo-kuma/validate-session");
-                    let obj = await res.json();
-                    if (obj.ok) {
-                        this.showEntry = false;
-                        this.iframeSrc = entryPath;
-                        this.startTimer();
-
-                    } else {
-                        window.location.href = window.location.origin.replace(`${sessionSubDomain}.`, "");
-                    }
-                } catch (e) {
-                    this.entryAction();
-                }
-            } else {
                 this.entryAction();
-            }
         },
         methods: {
             entryAction() {
@@ -111,12 +69,10 @@
                     let obj = await res.json();
 
                     if (res.status === 200 && obj.ok) {
-                        this.loading = false;
-                        this.iframeSrc = entryPath;
+                        this.loading = false;                       
 
                        const {host, protocol} = window.location;
-                       window.location.href = `${protocol}//demo-${obj.sessionID}.${host}/demo-kuma/?endSessionTime=${obj.endSessionTime}`;
-
+                       window.location.href = `${protocol}//demo-${obj.sessionID}.${host}/${entryPath}`;
                     } else {
                         this.loading = false;
                         alert(obj.error || "Error starting demo, please try again later.");
@@ -128,35 +84,7 @@
                     this.showEntry = true;
                 }
 
-            },
-
-            startTimer() {
-                if (timer) {
-                    return;
-                }
-
-                this.showFixed = true;
-                let endSessionTime = localStorage.getItem("endSessionTime");
-
-
-                timer = setInterval(() => {
-                    let now = Date.now();
-                    let distance = endSessionTime - now;
-
-                    let minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)) + "";
-                    let seconds = Math.floor((distance % (1000 * 60)) / 1000) + "";
-
-                    this.countdown = minutes.padStart(2, "0") + ":" + seconds.padStart(2, "0");
-
-                    if (distance <= 0) {
-                        clearInterval(timer);
-                        this.countdown = "00:00";
-                        this.iframeSrc = "";
-                        this.showEnd = true;
-                        this.showFixed = false;
-                    }
-                }, 1000);
-            },
+            },                        
         }
     }).mount('#app');
 </script>

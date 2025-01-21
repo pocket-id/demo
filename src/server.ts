@@ -71,22 +71,14 @@ async function requestHandler(
     return;
   }
 
+  const sessionID = getSessionID(req);
+  const target = pool.getServiceURL(sessionID);
   // Handle request
-  if (req.url === "/") {
-    const sessionID = getSessionID(req);
-    const target = pool.getServiceURL(sessionID);
+  if (req.url === "/" && !(sessionID && target)) {
+    res.writeHead(302, {
+      Location: "/start-demo",
+    });
 
-    // If a session is found, proxy it
-    if (sessionID && target) {
-      res.writeHead(302, {
-        Location: "/demo-kuma/",
-      });
-    } else {
-      // Redirect to "/start"
-      res.writeHead(302, {
-        Location: "/start-demo",
-      });
-    }
     res.end();
   } else if (req.url === "/start-demo" || req.url === "/start-demo") {
     res.writeHead(200, { "Content-Type": "text/html" });
@@ -101,22 +93,7 @@ async function requestHandler(
     );
     res.end(indexTemplate);
   } else if (req.url.startsWith("/demo-kuma/")) {
-    if (
-      req.url.startsWith("/demo-kuma/?endSessionTime=") ||
-      req.url === "/demo-kuma/"
-    ) {
-      res.writeHead(200, { "Content-Type": "text/html" });
-      const indexTemplate = ejs.render(
-        await fs.readFile("./src/views/index.ejs", "utf-8"),
-        {
-          websiteName,
-          installURL,
-          autoStart: !showEntry,
-          entryPath,
-        },
-      );
-      res.end(indexTemplate);
-    } else if (req.url === "/demo-kuma/start-instance") {
+    if (req.url === "/demo-kuma/start-instance") {
       try {
         const { endSessionTime, sessionID } = await pool.startInstance(
           getIPAddress(req),
