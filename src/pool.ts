@@ -47,7 +47,7 @@ export class Pool {
     const hostWithoutPort = host.replace(/:\d+$/, "");
     const appUrl = `${
       httpsEnabled ? "https" : "http"
-    }://demo-${sessionID}.${hostWithoutPort}`;
+    }://${sessionID}.${hostWithoutPort}`;
 
     const envVariables = {
       PUBLIC_APP_URL: appUrl,

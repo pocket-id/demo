@@ -55,7 +55,7 @@ gracefulShutdown(server, {
  * @param req
  */
 function getSessionID(req: http.IncomingMessage) {
-  const sessionId = req.headers.host?.split(".")[0]?.replace("demo-", "");
+  const sessionId = req.headers.host?.split(".")[0];
   if (sessionId?.length !== 8) {
     return null;
   }

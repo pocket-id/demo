@@ -5,8 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="stylesheet" type="text/css"  href="/demo-kuma/main.css" />
-    <script defer src="https://analytics.eliasschneider.com/script.js" data-website-id="2186999d-bb84-4465-ad91-39ab36952144"></script>
+    <link rel="stylesheet" type="text/css"  href="/demo-kuma/main.css" />    
 </head>
 <body>
 
@@ -72,7 +71,7 @@
                         this.loading = false;                       
 
                        const {host, protocol} = window.location;
-                       window.location.href = `${protocol}//demo-${obj.sessionID}.${host}/${entryPath}`;
+                       window.location.href = `${protocol}//${obj.sessionID}.${host}${entryPath}`;
                     } else {
                         this.loading = false;
                         alert(obj.error || "Error starting demo, please try again later.");
