@@ -1,54 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title><%= websiteName %></title>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    <link rel="stylesheet" type="text/css"  href="/demo-kuma/main.css" />    
+    <title>Pocket ID | Demo</title>
+    <%- include("partials/head") %>
 </head>
 <body>
 
-<div id="app" v-cloak>
-    <div class="main" >
-        <div class="entry" v-if="showEntry">
-            <img src="/demo-kuma/logo.svg" alt="<%= websiteName %>" class="logo" />
-            <h2><%= websiteName %></h2>           
-            <p class="mt-4">
-                You can use this demo to try out <%= websiteName %> before installing it on your own server. <br>
-                The demo will be available for 1 hour and will be deleted afterwards.
-            </p>
-            <button class="btn btn-primary btn-big mt-3" @click="start" data-umami-event="Start Demo Button">Start Demo</button>
-        </div>
-     
-        <div class="loading" v-if="loading">
-            Preparing your demo, please wait...
-        </div>
+<main class="page" id="app" v-cloak>
+    <%- include("partials/mark") %>
 
+    <div class="content" v-if="showEntry">
+        <h1>Try Pocket ID</h1>
+        <p class="lede">
+            Try out Pocket ID before you install it. The instance and everything in it is deleted after <%= sessionDuration %>.
+        </p>
+        <p class="error" v-if="error">{{ error }}</p>
+        <div class="actions">
+            <button class="btn btn-primary" @click="start" data-umami-event="Start Demo Button">
+                Start the demo
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+            </button>
+            <a class="btn btn-secondary" href="https://pocket-id.org/docs/setup/installation">
+                Install Pocket ID
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10" /><path d="M7 17 17 7" /></svg>
+            </a>
+        </div>
     </div>
-</div>
+
+    <div class="content" v-if="loading" role="status">
+        <h1>Starting your demo</h1>
+        <p class="lede">Your Pocket ID instance is starting up, which usually takes a few seconds.</p>
+        <span class="spinner" aria-hidden="true"></span>
+    </div>
+</main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.2/vue.global.prod.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
     const autoStart = <%- JSON.stringify(autoStart) %>;
     let entryPath = <%- JSON.stringify(entryPath) %>;
-    let timer;
+    const defaultError = "The demo couldn't be started. Please try again later.";
 
     const { createApp } = Vue;
     createApp({
         data() {
             return {
                 loading: false,
-                showEntry: false,            
+                showEntry: false,
+                error: "",
             }
         },
-        computed: {
-
-        },
         async mounted() {
-            const sessionSubDomain = window.location.host?.split(".")[0]
-                this.entryAction();
+            this.entryAction();
         },
         methods: {
             entryAction() {
@@ -62,28 +64,28 @@
             async start() {
                 this.showEntry = false;
                 this.loading = true;
+                this.error = "";
 
                 try {
                     let res = await fetch("/demo-kuma/start-instance");
                     let obj = await res.json();
 
                     if (res.status === 200 && obj.ok) {
-                        this.loading = false;                       
-
-                       const {host, protocol} = window.location;
-                       window.location.href = `${protocol}//${obj.sessionID}.${host}${entryPath}`;
+                        const {host, protocol} = window.location;
+                        window.location.href = `${protocol}//${obj.sessionID}.${host}${entryPath}`;
                     } else {
-                        this.loading = false;
-                        alert(obj.error || "Error starting demo, please try again later.");
-                        this.showEntry = true;
+                        this.showError(obj.error);
                     }
                 } catch (e) {
-                    this.loading = false;
-                    alert("Error starting demo, please try again later.");
-                    this.showEntry = true;
+                    this.showError();
                 }
+            },
 
-            },                        
+            showError(message) {
+                this.loading = false;
+                this.error = message || defaultError;
+                this.showEntry = true;
+            },
         }
     }).mount('#app');
 </script>

@@ -1,7 +1,7 @@
 services:
   # Main Service that you want to create a demo
   main:
-    image: stonith404/pocket-id
+    image: pocket-id/pocket-id
     restart: no
 
     # The network name should be the same as the one in compose.yaml, so that demo-kuma can find it and access it

@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import "dotenv/config";
 import ejs from "ejs";
 import fs from "fs/promises";
@@ -7,14 +8,13 @@ import httpProxy from "http-proxy";
 import path from "path";
 import {
   entryPath,
-  installURL,
   serverPort,
+  sessionTime,
   showEntry,
   trustProxy,
-  websiteName,
 } from "./config";
 import { Pool, PublicPoolError } from "./pool";
-import { contentType, sleep } from "./util";
+import { contentType, formatDuration, sleep } from "./util";
 
 // Catch unexpected errors here
 const unexpectedErrorHandler = (error: unknown) => {
@@ -25,6 +25,13 @@ process.addListener("uncaughtException", unexpectedErrorHandler);
 
 const pool = new Pool();
 const proxy = httpProxy.createProxyServer();
+
+// The stylesheet's URL carries a hash of its content, so caches like Cloudflare's fetch it again after a change
+const styleVersion = crypto
+  .createHash("sha256")
+  .update(await fs.readFile("./public/demo-kuma/main.css"))
+  .digest("hex")
+  .substring(0, 8);
 
 await pool.clearInstance();
 
@@ -72,26 +79,19 @@ async function requestHandler(
   }
 
   const sessionID = getSessionID(req);
-  const target = pool.getServiceURL(sessionID);
   // Handle request
-  if (req.url === "/" && !(sessionID && target)) {
+  if (req.url === "/" && !sessionID) {
     res.writeHead(302, {
       Location: "/start-demo",
     });
 
     res.end();
   } else if (req.url === "/start-demo" || req.url === "/start-demo") {
-    res.writeHead(200, { "Content-Type": "text/html" });
-    const indexTemplate = ejs.render(
-      await fs.readFile("./src/views/index.ejs", "utf-8"),
-      {
-        websiteName,
-        installURL,
-        autoStart: !showEntry,
-        entryPath,
-      },
-    );
-    res.end(indexTemplate);
+    await renderView(res, 200, "index", {
+      autoStart: !showEntry,
+      entryPath,
+      sessionDuration: formatDuration(sessionTime),
+    });
   } else if (req.url.startsWith("/demo-kuma/")) {
     if (req.url === "/demo-kuma/start-instance") {
       try {
@@ -133,8 +133,9 @@ async function requestHandler(
       );
     } else {
       try {
-        const data = await fs.readFile(path.join("./public", req.url));
-        res.writeHead(200, { "Content-Type": contentType(req.url) });
+        const filePath = req.url.split("?")[0];
+        const data = await fs.readFile(path.join("./public", filePath));
+        res.writeHead(200, { "Content-Type": contentType(filePath) });
         res.end(data);
       } catch (e) {
         res.writeHead(404);
@@ -166,15 +167,75 @@ async function proxyWeb(
           await sleep(2000);
           await proxyWeb(req, res, retryCount + 1);
         } else {
-          res.writeHead(500);
-          res.end("Unable to connect to the instance");
+          await sendError(req, res, 500, "Unable to connect to the instance", {
+            title: "The demo isn't responding",
+            text: "Your Pocket ID instance didn't answer in time. Start a new demo to try again.",
+            actionText: "Start a new demo",
+            actionURL: startDemoURL(req),
+          });
         }
       },
     );
+  } else if (sessionID) {
+    await sendError(req, res, 404, "Session not found", {
+      title: "This demo has ended",
+      text: `Demo instances are deleted after ${formatDuration(sessionTime)}, together with everything in them. Start a new one to keep exploring Pocket ID.`,
+      actionText: "Start a new demo",
+      actionURL: startDemoURL(req),
+    });
   } else {
-    res.writeHead(404);
-    res.end("Session not found");
+    await sendError(req, res, 404, "Not found", {
+      title: "Page not found",
+      text: "There's nothing here. Start a demo to try Pocket ID.",
+      actionText: "Go to the demo",
+      actionURL: "/start-demo",
+    });
   }
+}
+
+async function renderView(
+  res: http.ServerResponse,
+  status: number,
+  view: string,
+  data: Record<string, unknown>,
+) {
+  const html = await ejs.renderFile(`./src/views/${view}.ejs`, {
+    styleVersion,
+    ...data,
+  });
+  res.writeHead(status, { "Content-Type": "text/html" });
+  res.end(html);
+}
+
+/**
+ * Show browsers a page in the Pocket ID branding, and answer everything else, like the app's API requests, in plain text
+ */
+async function sendError(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  status: number,
+  message: string,
+  page: { title: string; text: string; actionText: string; actionURL: string },
+) {
+  if (req.headers.accept?.includes("text/html")) {
+    await renderView(res, status, "message", page);
+  } else {
+    res.writeHead(status);
+    res.end(message);
+  }
+}
+
+/**
+ * The start page lives on the main domain, so a session subdomain links back to it without the session ID
+ * @param req
+ */
+function startDemoURL(req: http.IncomingMessage) {
+  const sessionID = getSessionID(req);
+  if (!sessionID) {
+    return "/start-demo";
+  }
+  const mainHost = req.headers.host!.substring(sessionID.length + 1);
+  return `//${mainHost}/start-demo`;
 }
 
 async function shutdownFunction(signal: string | undefined) {

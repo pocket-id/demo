@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "docker-compose -f compose-dev.yaml up",
     "start": "tsx server.ts",
-    "build-docker-image": "docker buildx build --push --tag ghcr.io/stonith404/pocket-id-demo --platform linux/amd64,linux/arm64 ."
+    "build-docker-image": "docker buildx build --push --tag ghcr.io/pocket-id/demo --platform linux/amd64,linux/arm64 ."
   },
   "repository": {
     "type": "git",
