@@ -24,7 +24,7 @@
     "http-graceful-shutdown": "~3.1.13",
     "http-proxy": "~1.18.1",
     "promisify-child-process": "~4.1.2",
-    "tsx": "~4.7.0"
+    "tsx": "~4.23.15"
   },
   "devDependencies": {
     "@types/ejs": "^3.1.5",
