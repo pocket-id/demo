@@ -1,45 +1,37 @@
-# Demo Kuma
-> [!NOTE]  
-> This is a fork of [louislam/demo-kuma](https://github.com/louislam/demo-kuma/). I have made some changes to the original project to fit the needs of Pocket ID. If you're interested in Demo Kuma, checkout the original repository as I didn't clean up the code and the documentation.
+# Pocket ID demo
 
-Create a demo site for your Docker based web application.
+Gives every visitor their own temporary [Pocket ID](https://github.com/pocket-id/pocket-id) instance, filled with seed data.
+Visitors go through the normal setup to create their admin account, and the instance is deleted when the session ends.
 
-Live Demo (Uptime Kuma):
-https://demo.kuma.pet/start-demo
+## Getting started
 
-ExerciseDiary (2 mins demo) - Another selfhosted app which I found on Reddit:
-https://exercisediary-demo.kuma.pet/start-demo
+```sh
+docker compose up -d --build
+```
 
-![image](https://github.com/louislam/demo-kuma/assets/1336778/f15b5e46-5c98-419e-98e4-a2d52b91780c)
+Open http://localhost:8080 and click "Start the demo".
+Each demo runs on its own subdomain like `3f9a1c2e.localhost`, which browsers resolve without any DNS setup.
 
-## Features
+In production, set `BASE_URL` and point DNS for both your host and `*.your-host` at the demo.
 
-- Quickly create a demo for your project.
-- Spin up a docker stack when requested, shut down the stack when time is up.
-- A countdown timer at the bottom right corner.
-- Custom demo duration.
-- Portless demo instances design in v2, you just need one port for Demo Kuma.
+## Configuration
 
-## How to use
+| Variable              | Default                               | Description                                          |
+| --------------------- | ------------------------------------- | ---------------------------------------------------- |
+| `BASE_URL`            | `http://localhost:8080`               | Public URL of the demo                               |
+| `PORT`                | `8080`                                | Port to listen on                                    |
+| `POCKET_ID_IMAGE`     | `ghcr.io/pocket-id/pocket-id:next-v3` | Pocket ID image used for the demos                   |
+| `DOCKER_NETWORK`      | `pocket-id-demo`                      | Docker network shared by the demo and its instances  |
+| `SESSION_DURATION`    | `1h`                                  | How long a demo lives                                |
+| `MAX_SESSIONS`        | `30`                                  | Maximum number of demos running at the same time     |
+| `RATE_LIMIT_DEMOS`    | `5`                                   | Demos an IP can start in a row, `0` turns it off     |
+| `RATE_LIMIT_INTERVAL` | `15m`                                 | How long an IP then waits for each further demo      |
+| `TRUST_PROXY`         | `false`                               | Set to `true` behind a reverse proxy                 |
 
-1. Create a stack directory `demo-kuma`.
-1. Download `compose.yaml` and `compose-demo.yaml` into the directory.
-   - `compose.yaml` = Demo Kuma stack
-     - You should go through all variables in the `environment:` section.
-   - `compose-demo.yaml` = The stack that you want to provide a demo
-     - By default, the main service should be `main` and the network name should be `demo-kuma_default`.
-     - If your stack name is not `demo-kuma`, you should change the network name to `{your-name}_default`
-1. `docker compose up -d`.
-1. Go to http://localhost:3003/start-demo to test the demo.
+## How it works
 
-## How it works?
-
-1. Demo Kuma takes control of your Docker
-1. User requests a demo via a browser
-1. Demo Kuma assign a session ID for this request and spin up the stack `compose-demo.yaml`
-1. Once the demo stack is started, Demo Kuma will act as a reverse proxy to communicate between the browser and the demo stack.
-1. The timer will be created at the same time. When time is up, Demo Kuma will shut down the stack.
-
-# More screenshots
-
-![image](https://github.com/louislam/demo-kuma/assets/1336778/c264c86a-0718-42af-a91b-20db061af7db)
+- On startup and once a day, the demo seeds one Pocket ID instance and keeps a copy of its data as a template.
+- Every new demo starts a container from that template, so it's ready in about two seconds.
+- Demos run on an internal network without internet access and with memory, CPU and disk limits, because visitors are admins inside them.
+- Restarting or updating the demo keeps running demos, so `docker compose down` leaves them and their network in place. To remove them, run `docker rm -f $(docker ps -aq --filter label=pocket-id-demo.session)`.
+- The demo answers Pocket ID's setup endpoints itself until the visitor has signed up, because the seeded users would otherwise close the setup.

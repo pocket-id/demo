@@ -1,16 +1,4 @@
-# Should be identical to .gitignore
-.env
-node_modules
-.idea
-tmp
-/private
-
-# Docker extra
-.editorconfig
-.env.sample
-.eslintrc.cjs
 .git
-.gitignore
-README.md
+.DS_Store
 compose.yaml
-Dockerfile
+README.md

@@ -1,0 +1,239 @@
+/* Pocket ID v3 branding: Funnel Display for headings, Funnel Sans for text and the app's mono palette */
+@font-face {
+  font-family: "Funnel Display";
+  font-weight: 300 800;
+  font-display: swap;
+  src: url("/_demo/fonts/FunnelDisplay-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Funnel Sans";
+  font-weight: 300 800;
+  font-display: swap;
+  src: url("/_demo/fonts/FunnelSans-latin.woff2") format("woff2");
+}
+
+:root {
+  color-scheme: light dark;
+  --sidebar: #fafafa;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --border: #e8e8e8;
+  --fg: #0a0a0a;
+  --fg-muted: #5e5e5e;
+  --primary: #0a0a0a;
+  --primary-foreground: #ffffff;
+  --primary-hover: #262626;
+  --danger-solid: #d73337;
+  --ring: #0a0a0a;
+  --elevation-overlay: 0 2px 4px rgb(31 29 27 / 0.06), 0 16px 40px -8px rgb(31 29 27 / 0.2);
+  --fw-display: 600;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sidebar: #0a0a0a;
+    --surface: #000000;
+    --surface-raised: #121212;
+    --border: #1f1f1f;
+    --fg: #ededed;
+    --fg-muted: #a1a1a1;
+    --primary: #ededed;
+    --primary-foreground: #000000;
+    --primary-hover: #d6d6d6;
+    --danger-solid: #f45a56;
+    --ring: #ededed;
+    --elevation-overlay: 0 2px 4px rgb(0 0 0 / 0.4), 0 16px 40px -8px rgb(0 0 0 / 0.7);
+    --fw-display: 500;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  font-family: "Funnel Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--fg);
+  background: var(--sidebar) url("/_demo/background.avif") center / cover no-repeat fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The app's sign-in card: centered on the photo on desktop, a sheet at the bottom on smaller screens */
+.card {
+  width: min(520px, 100%);
+  padding: 48px;
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border), var(--elevation-overlay);
+}
+
+@media (max-width: 1023px) {
+  body {
+    place-items: end center;
+    padding: 30dvh 0 0;
+    background-attachment: scroll;
+  }
+
+  .card {
+    width: min(512px, 100%);
+    padding: 24px 24px calc(24px + env(safe-area-inset-bottom));
+    border-radius: 12px 12px 0 0;
+  }
+}
+
+.tile {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 24px;
+  border-radius: 12px;
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.tile svg {
+  width: 32px;
+  height: 32px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-family: "Funnel Display", "Funnel Sans", ui-sans-serif, system-ui, sans-serif;
+  font-size: 34px;
+  font-weight: var(--fw-display);
+  line-height: 42px;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+@media (max-width: 639px) {
+  h1 {
+    font-size: 28px;
+    line-height: 36px;
+    letter-spacing: -0.015em;
+  }
+}
+
+.lede {
+  margin: 0 0 24px;
+  font-size: 17px;
+  line-height: 26px;
+  color: var(--fg-muted);
+  text-wrap: pretty;
+}
+
+.error {
+  color: var(--fg);
+}
+
+.error::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--danger-solid);
+  vertical-align: 1px;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease-out,
+    color 120ms ease-out,
+    transform 120ms ease-out;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  width: 100%;
+  font-weight: 600;
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-primary:disabled {
+  cursor: progress;
+}
+
+@media (min-width: 1024px) {
+  .btn-primary {
+    height: 52px;
+  }
+}
+
+.btn-quiet {
+  color: var(--fg-muted);
+}
+
+.btn-quiet:hover {
+  color: var(--fg);
+}
+
+.spinner {
+  display: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 800ms linear infinite;
+}
+
+[aria-busy="true"] .spinner {
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
