@@ -136,7 +136,7 @@ func loadConfig() (config, error) {
 	return config{
 		baseURL:         baseURL,
 		port:            env("PORT", "8080"),
-		image:           env("POCKET_ID_IMAGE", "ghcr.io/pocket-id/pocket-id:next-v3"),
+		image:           env("POCKET_ID_IMAGE", "ghcr.io/pocket-id/pocket-id"),
 		network:         env("DOCKER_NETWORK", "pocket-id-demo"),
 		sessionDuration: sessionDuration,
 		maxSessions:     maxSessions,
