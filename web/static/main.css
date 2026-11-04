@@ -1,16 +1,17 @@
-/* Pocket ID v3 branding: Funnel Display for headings, Funnel Sans for text and the app's mono palette */
+/* Pocket ID v3 branding: Young Serif for headings, DM Sans for text and the app's mono palette */
+/* Sizes follow Pocket ID's default appearance, which scales the theme's 15px type to 16px, adds 1% letter spacing and rounds every radius by 1.25 */
 @font-face {
-  font-family: "Funnel Display";
-  font-weight: 300 800;
+  font-family: "Young Serif";
+  font-weight: 400;
   font-display: swap;
-  src: url("/_demo/fonts/FunnelDisplay-latin.woff2") format("woff2");
+  src: url("/_demo/fonts/YoungSerif-latin.woff2") format("woff2");
 }
 
 @font-face {
-  font-family: "Funnel Sans";
-  font-weight: 300 800;
+  font-family: "DM Sans";
+  font-weight: 100 1000;
   font-display: swap;
-  src: url("/_demo/fonts/FunnelSans-latin.woff2") format("woff2");
+  src: url("/_demo/fonts/DMSans-latin.woff2") format("woff2");
 }
 
 :root {
@@ -27,15 +28,15 @@
   --danger-solid: #d73337;
   --ring: #0a0a0a;
   --elevation-overlay: 0 2px 4px rgb(31 29 27 / 0.06), 0 16px 40px -8px rgb(31 29 27 / 0.2);
-  --fw-display: 600;
+  --scale: calc(16 / 15);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --sidebar: #0a0a0a;
-    --surface: #000000;
-    --surface-raised: #121212;
-    --border: #1f1f1f;
+    --sidebar: #161616;
+    --surface: #111111;
+    --surface-raised: #232323;
+    --border: rgb(255 255 255 / 0.12);
     --fg: #ededed;
     --fg-muted: #a1a1a1;
     --primary: #ededed;
@@ -44,7 +45,6 @@
     --danger-solid: #f45a56;
     --ring: #ededed;
     --elevation-overlay: 0 2px 4px rgb(0 0 0 / 0.4), 0 16px 40px -8px rgb(0 0 0 / 0.7);
-    --fw-display: 500;
   }
 }
 
@@ -64,9 +64,10 @@ body {
   display: grid;
   place-items: center;
   padding: 32px;
-  font-family: "Funnel Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 15px;
-  line-height: 22px;
+  font-family: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: calc(15px * var(--scale));
+  line-height: calc(22px * var(--scale));
+  letter-spacing: 0.01em;
   color: var(--fg);
   background: var(--sidebar) url("/_demo/background.avif") center / cover no-repeat fixed;
   -webkit-font-smoothing: antialiased;
@@ -75,8 +76,8 @@ body {
 /* The app's sign-in card: centered on the photo on desktop, a sheet at the bottom on smaller screens */
 .card {
   width: min(520px, 100%);
-  padding: 48px;
-  border-radius: 24px;
+  padding: 72px 48px 80px;
+  border-radius: 30px;
   background: var(--surface);
   box-shadow: inset 0 0 0 1px var(--border), var(--elevation-overlay);
 }
@@ -91,7 +92,7 @@ body {
   .card {
     width: min(512px, 100%);
     padding: 24px 24px calc(24px + env(safe-area-inset-bottom));
-    border-radius: 12px 12px 0 0;
+    border-radius: 15px 15px 0 0;
   }
 }
 
@@ -101,7 +102,7 @@ body {
   width: 56px;
   height: 56px;
   margin-bottom: 24px;
-  border-radius: 12px;
+  border-radius: 15px;
   background: var(--surface-raised);
   box-shadow: inset 0 0 0 1px var(--border);
 }
@@ -113,26 +114,26 @@ body {
 
 h1 {
   margin: 0 0 8px;
-  font-family: "Funnel Display", "Funnel Sans", ui-sans-serif, system-ui, sans-serif;
-  font-size: 34px;
-  font-weight: var(--fw-display);
-  line-height: 42px;
-  letter-spacing: -0.02em;
+  font-family: "Young Serif", ui-serif, Georgia, serif;
+  font-size: calc(34px * var(--scale));
+  font-weight: 400;
+  line-height: calc(42px * var(--scale));
+  letter-spacing: -0.01em;
   text-wrap: balance;
 }
 
 @media (max-width: 639px) {
   h1 {
-    font-size: 28px;
-    line-height: 36px;
-    letter-spacing: -0.015em;
+    font-size: calc(28px * var(--scale));
+    line-height: calc(36px * var(--scale));
+    letter-spacing: -0.005em;
   }
 }
 
 .lede {
   margin: 0 0 24px;
-  font-size: 17px;
-  line-height: 26px;
+  font-size: calc(17px * var(--scale));
+  line-height: calc(26px * var(--scale));
   color: var(--fg-muted);
   text-wrap: pretty;
 }
@@ -141,15 +142,16 @@ h1 {
   color: var(--fg);
 }
 
+/* Solar's danger-circle-bold-duotone, the icon the app shows beside a failure */
 .error::before {
   content: "";
   display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 8px;
-  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
   background: var(--danger-solid);
-  vertical-align: 1px;
+  vertical-align: -1px;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M22 12A10 10 0 1 0 2 12a10 10 0 0 0 20 0Z' opacity='.5'/%3E%3Cpath d='M12 6.25a.75.75 0 0 1 .75.75v6a.75.75 0 0 1-1.5 0V7a.75.75 0 0 1 .75-.75ZM12 17a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .actions {
@@ -167,10 +169,9 @@ h1 {
   height: 48px;
   padding: 0 12px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 12.5px;
   background: none;
   font: inherit;
-  font-size: 15px;
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
@@ -191,7 +192,7 @@ h1 {
 
 .btn-primary {
   width: 100%;
-  font-weight: 600;
+  font-weight: 500;
   background: var(--primary);
   color: var(--primary-foreground);
 }
@@ -218,22 +219,18 @@ h1 {
   color: var(--fg);
 }
 
-.spinner {
-  display: none;
-  width: 16px;
-  height: 16px;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  animation: spin 800ms linear infinite;
+/* A busy button shimmers its label instead of showing a spinner */
+[aria-busy="true"] > span {
+  mask-image: linear-gradient(90deg, #0006 0 35%, #000 50%, #0006 65% 100%);
+  mask-size: 300% 100%;
+  animation: shimmer 1.6s linear infinite;
 }
 
-[aria-busy="true"] .spinner {
-  display: inline-block;
-}
-
-@keyframes spin {
+@keyframes shimmer {
+  from {
+    mask-position: 100% 0;
+  }
   to {
-    transform: rotate(360deg);
+    mask-position: 0 0;
   }
 }
