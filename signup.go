@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -78,10 +79,15 @@ func (s *server) signUp(w http.ResponseWriter, r *http.Request, sess *session) e
 	if err := sess.call(r.Context(), http.MethodPost, "/users/"+user.ID+"/one-time-access-token", struct{}{}, &code); err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, sess.url+"/api/one-time-access-token/"+code.Token, nil)
+	body, err := json.Marshal(map[string]string{"token": code.Token})
 	if err != nil {
 		return err
 	}
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, sess.url+"/api/one-time-access-token", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", r.UserAgent())
 	req.Header.Set("X-Forwarded-For", s.clientIP(r))
 	res, err := httpClient.Do(req)
