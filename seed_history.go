@@ -31,13 +31,18 @@ type seededApp struct {
 	app
 	id      string
 	created time.Time
+	// disabled is zero for apps that are still in use
+	disabled time.Time
+	creator  *member
 }
 
 type auditLog struct {
 	at            time.Time
 	event, ip, ua string
-	userID, city  string
-	data          map[string]string
+	city          string
+	// user is nil for entries that concern no user, such as an app being created
+	user, actor *member
+	data        map[string]string
 }
 
 type passkey struct {
@@ -57,6 +62,7 @@ type history struct {
 	windowStart  time.Time
 	groupDates   map[string]time.Time
 	members      []*member
+	founder      *member
 	clients      []seededApp
 
 	logs       []auditLog
@@ -72,6 +78,7 @@ func writeHistory(dbPath string, ids seedIDs, rng *mrand.Rand, now time.Time) er
 		}
 	}
 	h.addOneOffs()
+	h.addAdminActions()
 	return h.write(dbPath, ids)
 }
 
@@ -122,7 +129,25 @@ func newHistory(ids seedIDs, rng *mrand.Rand, now time.Time) *history {
 		} else {
 			c.created = h.companyStart.AddDate(0, 0, 2+rng.IntN(329)).Add(h.hours(10))
 		}
+		if a.disabledDaysAgo > 0 {
+			c.disabled = now.AddDate(0, 0, -a.disabledDaysAgo).Add(-time.Hour - h.hours(6))
+		}
 		h.clients = append(h.clients, c)
+	}
+
+	// The first admin set up Pocket ID, so their account predates every other account, group and app
+	h.founder = h.members[slices.IndexFunc(h.members, func(m *member) bool { return m.admin })]
+	for _, m := range h.members {
+		h.founder.created = minTime(h.founder.created, m.created.Add(-time.Hour))
+	}
+	for _, at := range h.groupDates {
+		h.founder.created = minTime(h.founder.created, at.Add(-time.Hour))
+	}
+	for _, c := range h.clients {
+		h.founder.created = minTime(h.founder.created, c.created.Add(-time.Hour))
+	}
+	for i := range h.clients {
+		h.clients[i].creator = h.adminAt(h.clients[i].created)
 	}
 	return h
 }
@@ -134,10 +159,7 @@ func (h *history) addActivity(m *member) {
 	}
 	start := maxTime(h.windowStart, m.created)
 	desktop, phone := userAgents[m.devices[0]], userAgents[m.devices[1]]
-	homeOrOffice := homeIP(m.city, m.id)
-	if office, ok := offices[m.city]; ok {
-		homeOrOffice = office
-	}
+	homeOrOffice := workIP(m)
 
 	// New hires sign in with a one-time link from IT before they create their first passkey
 	if !m.created.Before(h.windowStart) {
@@ -220,7 +242,7 @@ func (h *history) addActivity(m *member) {
 					continue
 				}
 				usedAt := at.Add(h.minutes(200))
-				if !usedAt.Before(end) {
+				if !usedAt.Before(end) || (!c.disabled.IsZero() && !usedAt.Before(c.disabled)) {
 					continue
 				}
 				event := "CLIENT_AUTHORIZATION"
@@ -230,7 +252,7 @@ func (h *history) addActivity(m *member) {
 				if !seen[c.key] {
 					event = "NEW_" + event
 				}
-				h.log(m, event, usedAt, ip, ua, city, map[string]string{"clientName": c.name})
+				h.log(m, event, usedAt, ip, ua, city, map[string]string{"clientID": c.id, "clientName": c.name})
 				seen[c.key] = true
 				key := [2]string{m.id, c.id}
 				h.authorized[key] = maxTime(h.authorized[key], usedAt)
@@ -302,12 +324,78 @@ func (h *history) addOneOffs() {
 	h.rng.Shuffle(len(inZurich), func(i, j int) { inZurich[i], inZurich[j] = inZurich[j], inZurich[i] })
 	for _, m := range inZurich[:3] {
 		at := h.now.AddDate(0, 0, -2-h.rng.IntN(58)).Add(-2*time.Hour - h.hours(4))
+		h.adminLog(h.adminAt(at), m, "LOGIN_CODE_CREATED", at.Add(-2*time.Minute-h.minutes(5)), map[string]string{"delivery": "link"})
 		h.log(m, "TOKEN_SIGN_IN", at, offices["Zurich"], userAgents[m.devices[0]], "Zurich", map[string]string{"newBrowser": "true"})
 	}
 }
 
+// addAdminActions records how the admins set up the groups, accounts and apps
+// The seeding's API calls record these too, but dated at the build and made with the static API key, so write discards those
+func (h *history) addAdminActions() {
+	groupNames := map[string]string{}
+	for _, g := range groups {
+		groupNames[g.key] = g.name
+		at := h.groupDates[g.key]
+		h.adminLog(h.adminAt(at), nil, "GROUP_CREATED", at, map[string]string{"groupName": g.name})
+	}
+
+	// New hires get a one-time link from IT right after their account is created
+	for _, m := range h.members {
+		if m == h.founder {
+			h.log(m, "ACCOUNT_CREATED", m.created, workIP(m), userAgents[m.devices[0]], m.city, map[string]string{"method": "initial_setup"})
+			continue
+		}
+		admin := h.adminAt(m.created)
+		h.adminLog(admin, m, "ACCOUNT_CREATED", m.created, nil)
+		if !m.pending && !m.created.Before(h.windowStart) {
+			h.adminLog(admin, m, "LOGIN_CODE_CREATED", m.created.Add(2*time.Minute+h.minutes(8)), map[string]string{"delivery": "link"})
+		}
+		if !m.left.IsZero() {
+			h.adminLog(h.adminAt(m.left), m, "ACCOUNT_DISABLED", m.left, nil)
+		}
+	}
+
+	for _, c := range h.clients {
+		client := func(data map[string]string) map[string]string {
+			data["clientID"], data["clientName"] = c.id, c.name
+			return data
+		}
+		h.adminLog(c.creator, nil, "CLIENT_CREATED", c.created, client(map[string]string{}))
+		if !c.public {
+			h.adminLog(c.creator, nil, "CLIENT_SECRET_CREATED", c.created, client(map[string]string{}))
+		}
+		for _, key := range c.groups {
+			at := maxTime(c.created, h.groupDates[key]).Add(time.Minute + h.minutes(10))
+			h.adminLog(c.creator, nil, "CLIENT_GROUP_ADDED", at, client(map[string]string{"groupName": groupNames[key]}))
+		}
+		if !c.disabled.IsZero() {
+			h.adminLog(h.adminAt(c.disabled), nil, "CLIENT_UPDATED", c.disabled, client(map[string]string{"changes": "disabled"}))
+		}
+	}
+}
+
+// adminAt picks one of the admins who worked at the company at the given time
+func (h *history) adminAt(t time.Time) *member {
+	var admins []*member
+	for _, m := range h.members {
+		if m.admin && m.created.Before(t) && (m.left.IsZero() || m.left.After(t)) {
+			admins = append(admins, m)
+		}
+	}
+	return admins[h.rng.IntN(len(admins))]
+}
+
 func (h *history) log(m *member, event string, at time.Time, ip, ua, city string, data map[string]string) {
-	h.logs = append(h.logs, auditLog{at: at, event: event, ip: ip, ua: ua, userID: m.id, city: city, data: data})
+	h.logs = append(h.logs, auditLog{at: at, event: event, ip: ip, ua: ua, user: m, actor: m, city: city, data: data})
+}
+
+// adminLog records an action an admin took in the admin UI, about the user or about no user when it is nil
+func (h *history) adminLog(admin, user *member, event string, at time.Time, data map[string]string) {
+	if data == nil {
+		data = map[string]string{}
+	}
+	data["via"] = "session"
+	h.logs = append(h.logs, auditLog{at: at, event: event, ip: workIP(admin), ua: userAgents[admin.devices[0]], user: user, actor: admin, city: admin.city, data: data})
 }
 
 func (h *history) write(dbPath string, ids seedIDs) error {
@@ -332,23 +420,18 @@ func (h *history) write(dbPath string, ids seedIDs) error {
 	}
 
 	// Backdate what the API created a minute ago
-	var admins []*member
 	for _, m := range h.members {
 		updated := m.created.AddDate(0, 0, h.rng.IntN(41))
 		if !m.left.IsZero() {
 			updated = m.left
 		}
 		exec("UPDATE users SET created_at = ?, updated_at = ? WHERE id = ?", m.created.Unix(), minTime(updated, h.now).Unix(), m.id)
-		if m.admin {
-			admins = append(admins, m)
-		}
 	}
 	for key, at := range h.groupDates {
 		exec("UPDATE user_groups SET created_at = ?, updated_at = ? WHERE id = ?", at.Unix(), at.Unix(), ids.groups[key])
 	}
 	for _, c := range h.clients {
-		creator := admins[h.rng.IntN(len(admins))]
-		exec("UPDATE oidc_clients SET created_at = ?, created_by_id = ? WHERE id = ?", c.created.Unix(), creator.id, c.id)
+		exec("UPDATE oidc_clients SET created_at = ?, created_by_id = ? WHERE id = ?", c.created.Unix(), c.creator.id, c.id)
 	}
 	apisCreated := h.companyStart.AddDate(0, 0, 200).Unix()
 	exec("UPDATE apis SET created_at = ?, updated_at = ?", apisCreated, h.now.AddDate(0, 0, -9).Unix())
@@ -365,13 +448,18 @@ func (h *history) write(dbPath string, ids seedIDs) error {
 		exec("INSERT INTO webauthn_credentials (id, created_at, name, credential_id, public_key, attestation_type, transport, user_id, backup_eligible, backup_state, aaguid) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
 			uuid.NewString(), pk.at.Unix(), pk.name, pk.credentialID, publicKey, "none", transports, pk.userID, pk.synced, pk.synced, pk.aaguid)
 	}
+	exec("DELETE FROM audit_logs")
 	for _, l := range h.logs {
 		data, _ := json.Marshal(l.data)
 		if l.data == nil {
 			data = []byte("{}")
 		}
-		exec("INSERT INTO audit_logs (id, created_at, event, ip_address, user_agent, data, user_id, country, city) VALUES (?,?,?,?,?,?,?,?,?)",
-			uuid.NewString(), l.at.Unix(), l.event, l.ip, l.ua, data, l.userID, cities[l.city].country, l.city)
+		var userID any
+		if l.user != nil {
+			userID = l.user.id
+		}
+		exec("INSERT INTO audit_logs (id, created_at, event, ip_address, user_agent, data, user_id, country, city, actor_type, actor_id, actor_name) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+			uuid.NewString(), l.at.Unix(), l.event, l.ip, l.ua, data, userID, cities[l.city].country, l.city, "user", l.actor.id, l.actor.username())
 	}
 	scopes := map[string][]byte{}
 	for _, c := range h.clients {
@@ -400,6 +488,14 @@ func homeIP(city, salt string) string {
 	f.Write([]byte(salt))
 	r := mrand.New(mrand.NewPCG(f.Sum64(), 0))
 	return fmt.Sprintf("%s.%d.%d", cities[city].ipPrefix, 1+r.IntN(254), 2+r.IntN(253))
+}
+
+// workIP is the office's address for people in an office city, and their home address for everyone else
+func workIP(m *member) string {
+	if office, ok := offices[m.city]; ok {
+		return office
+	}
+	return homeIP(m.city, m.id)
 }
 
 func (h *history) hours(n int) time.Duration   { return time.Duration(h.rng.IntN(n)) * time.Hour }

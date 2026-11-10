@@ -202,16 +202,18 @@ type app struct {
 	usage float64
 	// createdDaysAgo dates apps added recently, zero picks a date in the company's first year
 	createdDaysAgo int
-	callbackURL    string
-	launchURL      string
-	policy         string
-	skipConsent    bool
-	reauth         bool
-	public         bool
-	pkce           bool
-	deviceCode     bool
-	groupsScope    bool
-	offlineAccess  bool
+	// disabledDaysAgo disables an app that was replaced, whose history stops on that day
+	disabledDaysAgo int
+	callbackURL     string
+	launchURL       string
+	policy          string
+	skipConsent     bool
+	reauth          bool
+	public          bool
+	pkce            bool
+	deviceCode      bool
+	groupsScope     bool
+	offlineAccess   bool
 }
 
 var apps = []app{
@@ -224,6 +226,7 @@ var apps = []app{
 	{key: "home-assistant", preset: "home-assistant", name: "Home Assistant", description: "Office climate, lights and door access", host: "home", groups: []string{"office-zurich", "admins"}, usage: 0.08, groupsScope: true},
 	{key: "forgejo", preset: "forgejo", name: "Forgejo", description: "Git hosting and code review", host: "git", groups: []string{"engineering", "design", "product", "data", "contractors"}, usage: 0.8, groupsScope: true},
 	{key: "woodpecker", preset: "woodpecker-ci", name: "Woodpecker CI", description: "Continuous integration pipelines", host: "ci", groups: []string{"engineering", "contractors"}, usage: 0.35},
+	{key: "jenkins", preset: "jenkins", name: "Jenkins", description: "Legacy build server, replaced by Woodpecker CI", host: "jenkins", groups: []string{"engineering"}, usage: 0.15, disabledDaysAgo: 30},
 	{key: "grafana", preset: "grafana", name: "Grafana", description: "Dashboards, metrics and alerting", host: "grafana", groups: []string{"engineering", "data", "leadership"}, usage: 0.35, policy: "grafana", groupsScope: true},
 	{key: "sentry", preset: "sentry", name: "Sentry", description: "Error tracking", host: "sentry", groups: []string{"engineering", "product"}, usage: 0.3},
 	{key: "argocd", preset: "argo-cd", name: "Argo CD", description: "GitOps deployments for the production clusters", host: "argocd", groups: []string{"platform", "backend"}, usage: 0.3, reauth: true, groupsScope: true},

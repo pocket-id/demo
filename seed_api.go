@@ -205,6 +205,7 @@ func createClient(ctx context.Context, inst instance, a app, groupIDs, policies 
 		"isGroupRestricted":        a.groups != nil,
 		"claimMappingPolicyId":     policies[a.policy],
 		"credentials":              map[string]any{},
+		"disabled":                 a.disabledDaysAgo > 0,
 	}
 	if launchURL != "" {
 		body["launchURL"] = launchURL
