@@ -26,7 +26,7 @@ func (e apiError) Error() string {
 	return fmt.Sprintf("%s %s: %d: %s", e.method, e.path, e.status, e.body)
 }
 
-// call sends a JSON request to the instance's API as the static API key user and decodes the response into out
+// call sends a JSON request to the instance's admin API with the static API key and decodes the response into out
 func (i instance) call(ctx context.Context, method, path string, body, out any) error {
 	var reader io.Reader
 	if body != nil {
@@ -59,7 +59,7 @@ func (i instance) upload(ctx context.Context, method, path, filename, contentTyp
 }
 
 func (i instance) send(ctx context.Context, method, path string, body io.Reader, contentType string, out any) error {
-	req, err := http.NewRequestWithContext(ctx, method, i.url+"/api"+path, body)
+	req, err := http.NewRequestWithContext(ctx, method, i.url+"/api/admin"+path, body)
 	if err != nil {
 		return err
 	}
