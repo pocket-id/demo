@@ -162,6 +162,7 @@ type server struct {
 	static     http.Handler
 	index      *template.Template
 	message    *template.Template
+	app        *template.Template
 	cssVersion string
 }
 
@@ -186,6 +187,7 @@ func newServer(cfg config, p *pool) (*server, error) {
 		static:     http.StripPrefix(assetPrefix, http.FileServerFS(static)),
 		index:      template.Must(template.ParseFS(webFS, "web/base.html", "web/index.html")),
 		message:    template.Must(template.ParseFS(webFS, "web/base.html", "web/message.html")),
+		app:        template.Must(template.ParseFS(webFS, "web/app.html")),
 		cssVersion: hex.EncodeToString(sum[:4]),
 	}
 	s.proxy = &httputil.ReverseProxy{Rewrite: s.rewrite, ErrorHandler: s.proxyError}
@@ -196,21 +198,21 @@ func newServer(cfg config, p *pool) (*server, error) {
 const assetPrefix = "/_demo/"
 
 func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if strings.HasPrefix(r.URL.Path, assetPrefix) {
+	id, onSession := s.sessionID(r.Host)
+	switch {
+	case onSession && strings.HasPrefix(r.URL.Path, appPrefix):
+		s.serveApp(w, r, id)
+	case strings.HasPrefix(r.URL.Path, assetPrefix):
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		s.static.ServeHTTP(w, r)
-		return
-	}
-	if id, ok := s.sessionID(r.Host); ok {
+	case onSession:
 		s.proxySession(w, r, id)
-		return
-	}
-
-	switch {
 	case r.URL.Path == "/" && r.Method == http.MethodGet:
 		s.render(w, http.StatusOK, s.index, map[string]string{"Duration": formatDuration(s.cfg.sessionDuration)})
 	case r.URL.Path == "/start" && r.Method == http.MethodPost:
 		s.start(w, r)
+	case strings.HasPrefix(r.URL.Path, launchPrefix) && r.Method == http.MethodGet:
+		s.launchApp(w, r)
 	default:
 		s.sendError(w, r, http.StatusNotFound, "Not found", messagePage{
 			Title:      "Page not found",
@@ -233,10 +235,20 @@ func (s *server) start(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusForbidden, "Cross-origin requests are not allowed.")
 		return
 	}
-	setupURL, err := s.pool.start(r.Context(), s.clientIP(r))
+	id, err := s.pool.start(r.Context(), s.clientIP(r))
 	if err == nil {
+		// The apps' launch URLs are the same in every instance, so this cookie tells which instance an app opened from the dashboard belongs to
+		http.SetCookie(w, &http.Cookie{
+			Name:     sessionCookie,
+			Value:    id,
+			Path:     launchPrefix,
+			MaxAge:   int(s.cfg.sessionDuration.Seconds()),
+			HttpOnly: true,
+			Secure:   s.cfg.baseURL.Scheme == "https",
+			SameSite: http.SameSiteLaxMode,
+		})
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]string{"url": setupURL})
+		_ = json.NewEncoder(w).Encode(map[string]string{"url": s.pool.sessionURL(id) + "/setup"})
 		return
 	}
 
@@ -266,6 +278,10 @@ func (s *server) proxySession(w http.ResponseWriter, r *http.Request, id string)
 		s.proxy.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), targetKey{}, sess.target)))
 		return
 	}
+	s.sessionEnded(w, r)
+}
+
+func (s *server) sessionEnded(w http.ResponseWriter, r *http.Request) {
 	s.sendError(w, r, http.StatusNotFound, "Session not found", messagePage{
 		Title:      "This demo has ended",
 		Text:       fmt.Sprintf("Demo instances are deleted after %s, together with everything in them. Start a new one to keep exploring Pocket ID.", formatDuration(s.cfg.sessionDuration)),

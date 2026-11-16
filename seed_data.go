@@ -205,7 +205,6 @@ type app struct {
 	// disabledDaysAgo disables an app that was replaced, whose history stops on that day
 	disabledDaysAgo int
 	callbackURL     string
-	launchURL       string
 	policy          string
 	skipConsent     bool
 	reauth          bool
@@ -242,7 +241,7 @@ var apps = []app{
 	{key: "twenty", preset: "twenty-crm", name: "Twenty CRM", description: "Customers, deals and pipeline", host: "crm", groups: []string{"sales", "marketing", "customer-success", "leadership"}, usage: 0.6},
 	{key: "n8n", preset: "n8n", name: "n8n", description: "Workflow automation", host: "automation", groups: []string{"platform", "marketing", "people-ops"}, usage: 0.15},
 	{key: "paperless", preset: "paperless-ngx", name: "Paperless-ngx", description: "Contracts, invoices and receipts", host: "docs", groups: []string{"finance", "people-ops", "leadership"}, usage: 0.3},
-	{key: "tailscale", preset: "tailscale", name: "Tailscale", description: "VPN to the office and infrastructure", groups: []string{"engineering", "admins", "contractors"}, usage: 0.15, policy: "minimal", callbackURL: "https://login.tailscale.com/a/oauth_response", launchURL: "https://login.tailscale.com"},
+	{key: "tailscale", preset: "tailscale", name: "Tailscale", description: "VPN to the office and infrastructure", groups: []string{"engineering", "admins", "contractors"}, usage: 0.15, policy: "minimal", callbackURL: "https://login.tailscale.com/a/oauth_response"},
 	{key: "admin-console", name: "Kestrel Admin Console", description: "Internal back office for customer accounts", host: "admin", groups: []string{"admins", "customer-success", "leadership", "backend"}, usage: 0.35},
 	{key: "cli", name: "Kestrel CLI", description: "Command line tool for the Kestrel platform", groups: []string{"engineering", "contractors"}, usage: 0.1, public: true, deviceCode: true, offlineAccess: true},
 	{key: "staging", name: "Staging Dashboard", description: "Pre-production environment of the Kestrel app", host: "staging", groups: []string{"engineering", "product", "qa", "design"}, usage: 0.25, pkce: true},

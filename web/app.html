@@ -1,0 +1,379 @@
+{{define "base"}}{{with .Page}}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>{{.Name}}</title>
+<link rel="icon" href="/api/oidc/clients/{{.ClientID}}/logo">
+<style>
+/* The sample app deliberately looks unlike Pocket ID, so visitors can tell where the app ends and the identity provider begins */
+:root {
+  color-scheme: light;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --border: #e4e6eb;
+  --fg: #14161a;
+  --fg-muted: #61656f;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-soft: #eef0ff;
+  --danger: #b42318;
+  --danger-soft: #fef3f2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--fg);
+  background: var(--surface);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+p {
+  margin: 0;
+  color: var(--fg-muted);
+}
+
+.logo {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-weight: 650;
+}
+
+.logo img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 550;
+  text-decoration: none;
+  transition: background-color 120ms ease-out;
+}
+
+.button:hover {
+  background: var(--accent-hover);
+}
+
+.button:focus-visible,
+.link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.link {
+  color: var(--fg-muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.link:hover {
+  color: var(--fg);
+}
+
+/* Sign-in: the form on the left and the app's artwork on the right */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  padding: 32px 48px;
+}
+
+.form {
+  width: min(360px, 100%);
+  margin: auto;
+}
+
+.form h1 {
+  margin-top: 0;
+}
+
+.form .button {
+  margin-top: 28px;
+}
+
+.alert {
+  margin-top: 20px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 14px;
+}
+
+.fineprint {
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+
+.art {
+  display: grid;
+  place-items: center;
+  margin: 12px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 30% 20%, rgb(255 255 255 / 0.18), transparent 50%),
+    radial-gradient(rgb(255 255 255 / 0.16) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(150deg, #6366f1, #4338ca 60%, #312e81);
+  color: #fff;
+  text-align: center;
+}
+
+.art .logo {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 24px;
+  border-radius: 24px;
+  box-shadow: 0 24px 48px -12px rgb(15 12 60 / 0.5);
+  font-size: 40px;
+  color: var(--fg);
+}
+
+.art p {
+  max-width: 320px;
+  color: rgb(255 255 255 / 0.8);
+  font-size: 17px;
+}
+
+@media (max-width: 860px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  .art {
+    display: none;
+  }
+
+  .panel {
+    padding: 24px 16px;
+  }
+}
+
+/* Signed in: a top bar like the app's own and the claims it received */
+.app {
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 60px;
+  padding: 0 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.content {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 40px 16px 64px;
+}
+
+.card {
+  margin-top: 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.card header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.card header p {
+  font-size: 14px;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.profile .avatar {
+  width: 56px;
+  height: 56px;
+  font-size: 20px;
+}
+
+.profile strong {
+  display: block;
+  font-size: 17px;
+}
+
+.claims {
+  margin: 0;
+}
+
+.claims div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 16px;
+  padding: 12px 20px;
+}
+
+.claims div + div {
+  border-top: 1px solid var(--border);
+}
+
+.claims dt {
+  color: var(--fg-muted);
+  font-size: 14px;
+}
+
+.claims dd {
+  margin: 0;
+  font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .claims div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .account .name {
+    display: none;
+  }
+}
+</style>
+</head>
+<body>
+{{if .User}}
+<div class="app">
+<nav class="topbar">
+<div class="brand">{{template "logo" .}}{{.Name}}<span class="badge">Sample app</span></div>
+<div class="account">
+<span class="name">{{.User.Name}}</span>
+{{template "avatar" .User}}
+<a class="link" href="{{.SignInURL}}">Sign out</a>
+</div>
+</nav>
+<main class="content">
+<h1>Welcome, {{.User.Name}}</h1>
+<p>You're signed in to {{.Name}} with Pocket ID. This is what the app now knows about you.</p>
+<section class="card">
+<header><h2>Your profile</h2></header>
+<div class="profile">
+{{template "avatar" .User}}
+<div><strong>{{.User.Name}}</strong><p>{{.User.Email}}</p></div>
+</div>
+</section>
+<section class="card">
+<header><h2>ID token claims</h2><p>Pocket ID signed these claims and sent them to {{.Name}}.</p></header>
+<dl class="claims">
+{{range .Claims}}<div><dt>{{.Key}}</dt><dd>{{.Value}}</dd></div>
+{{end}}</dl>
+</section>
+</main>
+</div>
+{{else}}
+<div class="split">
+<section class="panel">
+<div class="brand">{{template "logo" .}}{{.Name}}</div>
+<div class="form">
+<h1>Sign in to {{.Name}}</h1>
+<p>Use your company account to continue.</p>
+{{if .Error}}<div class="alert" role="alert">{{.Error}}</div>{{end}}
+<a class="button" href="{{.SignInURL}}">{{if .Error}}Try again{{else}}Continue with Pocket ID{{end}}</a>
+</div>
+<p class="fineprint">A sample app of the Pocket ID demo, standing in for {{.Name}}.</p>
+</section>
+<aside class="art" aria-hidden="true">
+<div>{{template "logo" .}}<p>{{.Description}}</p></div>
+</aside>
+</div>
+{{end}}
+</body>
+</html>
+{{end}}{{end}}
+{{define "logo"}}<span class="logo">{{if .HasLogo}}<img src="/api/oidc/clients/{{.ClientID}}/logo" alt="">{{else}}{{slice .Name 0 1}}{{end}}</span>{{end}}
+{{define "avatar"}}<span class="avatar">{{if .Picture}}<img src="{{.Picture}}" alt="">{{else}}{{slice .Name 0 1}}{{end}}</span>{{end}}

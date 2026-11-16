@@ -463,14 +463,7 @@ func (h *history) write(dbPath string, ids seedIDs) error {
 	}
 	scopes := map[string][]byte{}
 	for _, c := range h.clients {
-		s := []string{"openid", "profile", "email"}
-		if c.groupsScope {
-			s = append(s, "groups")
-		}
-		if c.offlineAccess {
-			s = append(s, "offline_access")
-		}
-		scopes[c.id], _ = json.Marshal(s)
+		scopes[c.id], _ = json.Marshal(c.scopes())
 	}
 	for key, at := range h.authorized {
 		exec("INSERT INTO user_authorized_oidc_clients (scope, user_id, client_id, last_used_at) VALUES (?,?,?,?)", scopes[key[1]], key[0], key[1], at.Unix())

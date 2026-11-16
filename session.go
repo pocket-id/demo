@@ -60,7 +60,7 @@ func newPool(cfg config, docker *client.Client) *pool {
 	}
 }
 
-// start runs a new instance from the template and returns the URL of its setup page
+// start runs a new instance from the template and returns its session ID
 func (p *pool) start(ctx context.Context, ip string) (string, error) {
 	tmpl := p.template.Load()
 	if tmpl == nil {
@@ -85,7 +85,7 @@ func (p *pool) start(ctx context.Context, ip string) (string, error) {
 	}
 
 	slog.Info("Session started", "session", id, "ip", ip)
-	return appURL + "/setup", nil
+	return id, nil
 }
 
 // publish makes a session reachable and schedules its end

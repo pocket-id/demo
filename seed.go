@@ -54,7 +54,7 @@ func (p *pool) buildTemplate(ctx context.Context) error {
 	}
 	defer p.removeContainer(inst.containerID)
 	rng := rand.New(rand.NewPCG(1337, 0))
-	ids, err := seedEntities(ctx, inst, rng)
+	ids, err := seedEntities(ctx, inst, p.cfg.baseURL, rng)
 	if err != nil {
 		return fmt.Errorf("seed: %w", err)
 	}

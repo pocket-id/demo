@@ -30,9 +30,10 @@ const (
 )
 
 type instance struct {
-	containerID string
-	url         string
-	apiKey      string
+	containerID   string
+	url           string
+	apiKey        string
+	encryptionKey string
 }
 
 // startInstance runs a Pocket ID container on the demo network and waits until it is healthy
@@ -119,7 +120,7 @@ func (p *pool) startInstance(ctx context.Context, id, appURL string, template []
 	return inst, waitHealthy(ctx, inst.url)
 }
 
-// inspectInstance reads a running container's address and static API key
+// inspectInstance reads a running container's address and keys
 func (p *pool) inspectInstance(ctx context.Context, containerID string) (instance, error) {
 	inst := instance{containerID: containerID}
 	inspect, err := p.docker.ContainerInspect(ctx, containerID, client.ContainerInspectOptions{})
@@ -132,8 +133,12 @@ func (p *pool) inspectInstance(ctx context.Context, containerID string) (instanc
 	}
 	inst.url = "http://" + net.JoinHostPort(endpoint.IPAddress.String(), "1411")
 	for _, env := range inspect.Container.Config.Env {
-		if key, ok := strings.CutPrefix(env, "STATIC_API_KEY="); ok {
-			inst.apiKey = key
+		name, value, _ := strings.Cut(env, "=")
+		switch name {
+		case "STATIC_API_KEY":
+			inst.apiKey = value
+		case "ENCRYPTION_KEY":
+			inst.encryptionKey = value
 		}
 	}
 	return inst, nil

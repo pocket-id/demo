@@ -36,7 +36,7 @@ type claim struct {
 }
 
 // seedEntities creates everything that should go through the server's own logic, like validation, logo storage and generated secrets
-func seedEntities(ctx context.Context, inst instance, rng *rand.Rand) (seedIDs, error) {
+func seedEntities(ctx context.Context, inst instance, demoURL *url.URL, rng *rand.Rand) (seedIDs, error) {
 	ids := seedIDs{groups: map[string]string{}}
 
 	for _, g := range groups {
@@ -82,7 +82,7 @@ func seedEntities(ctx context.Context, inst instance, rng *rand.Rand) (seedIDs, 
 
 	appIDs := map[string]string{}
 	for _, a := range apps {
-		id, err := createClient(ctx, inst, a, ids.groups, policies)
+		id, err := createClient(ctx, inst, demoURL, a, ids.groups, policies)
 		if err != nil {
 			return ids, err
 		}
@@ -171,7 +171,7 @@ func createPolicies(ctx context.Context, inst instance) (map[string]string, erro
 	return ids, nil
 }
 
-func createClient(ctx context.Context, inst instance, a app, groupIDs, policies map[string]string) (string, error) {
+func createClient(ctx context.Context, inst instance, demoURL *url.URL, a app, groupIDs, policies map[string]string) (string, error) {
 	baseURL := ""
 	if a.host != "" {
 		baseURL = "https://" + a.host + "." + domain
@@ -184,19 +184,17 @@ func createClient(ctx context.Context, inst instance, a app, groupIDs, policies 
 	default:
 		callbackURL = "http://localhost:8085/callback"
 	}
-	launchURL := a.launchURL
-	if launchURL == "" {
-		launchURL = baseURL
-	}
 	logoutURLs := []string{}
 	if baseURL != "" {
 		logoutURLs = append(logoutURLs, baseURL+"/logout")
 	}
 
+	callbackURLs := []string{callbackURL}
+	id := a.clientID()
 	body := map[string]any{
+		"id":                       id,
 		"name":                     a.name,
 		"description":              a.description,
-		"callbackURLs":             []string{callbackURL},
 		"logoutCallbackURLs":       logoutURLs,
 		"isPublic":                 a.public,
 		"pkceEnabled":              a.public || a.pkce,
@@ -207,16 +205,33 @@ func createClient(ctx context.Context, inst instance, a app, groupIDs, policies 
 		"credentials":              map[string]any{},
 		"disabled":                 a.disabledDaysAgo > 0,
 	}
-	if launchURL != "" {
-		body["launchURL"] = launchURL
+	// The app's dashboard entry opens the demo's sample app, and each instance runs on its own subdomain, hence the wildcard callback
+	if a.launchable() {
+		body["launchURL"] = demoURL.JoinPath(launchPrefix, a.key).String()
+		callbackURLs = append(callbackURLs, demoURL.Scheme+"://*."+demoURL.Host+appPrefix+a.key+"/callback")
 	}
-	var res created
+	body["callbackURLs"] = callbackURLs
+	var res struct {
+		CreatedSecret *created `json:"createdSecret"`
+	}
 	if err := inst.call(ctx, http.MethodPost, "/oidc/clients", body, &res); err != nil {
 		return "", err
 	}
 
+	// Replace the generated secret with one the sample app can derive in every instance made from this template
+	if a.launchable() {
+		if res.CreatedSecret != nil {
+			if err := inst.call(ctx, http.MethodDelete, "/oidc/clients/"+id+"/secrets/"+res.CreatedSecret.ID, nil, nil); err != nil {
+				return "", err
+			}
+		}
+		if err := inst.call(ctx, http.MethodPost, "/oidc/clients/"+id+"/secrets", map[string]string{"secret": inst.clientSecret(id)}, nil); err != nil {
+			return "", err
+		}
+	}
+
 	if a.preset != "" {
-		if err := uploadLogos(ctx, inst, res.ID, a.preset); err != nil {
+		if err := uploadLogos(ctx, inst, id, a.preset); err != nil {
 			slog.Warn("Skipped logo", "app", a.name, "error", err)
 		}
 	}
@@ -225,11 +240,11 @@ func createClient(ctx context.Context, inst instance, a app, groupIDs, policies 
 		for _, key := range a.groups {
 			allowed = append(allowed, groupIDs[key])
 		}
-		if err := inst.call(ctx, http.MethodPut, "/oidc/clients/"+res.ID+"/allowed-user-groups", map[string]any{"userGroupIds": allowed}, nil); err != nil {
+		if err := inst.call(ctx, http.MethodPut, "/oidc/clients/"+id+"/allowed-user-groups", map[string]any{"userGroupIds": allowed}, nil); err != nil {
 			return "", err
 		}
 	}
-	return res.ID, nil
+	return id, nil
 }
 
 // uploadLogos uploads the preset's logos separately because a failed download while creating a client would still leave it behind
