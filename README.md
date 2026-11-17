@@ -34,5 +34,5 @@ In production, set `BASE_URL` and point DNS for both your host and `*.your-host`
 - Every new demo starts a container from that template, so it's ready in about two seconds.
 - Demos run on an internal network without internet access and with memory, CPU and disk limits, because visitors are admins inside them.
 - Restarting or updating the demo keeps running demos, so `docker compose down` leaves them and their network in place. To remove them, run `docker rm -f $(docker ps -aq --filter label=pocket-id-demo.session)`.
-- The demo answers Pocket ID's setup endpoints itself until the visitor has signed up, because the seeded users would otherwise close the setup.
+- The demo answers Pocket ID's setup endpoints itself and sends the landing and login pages to the setup until the visitor has signed up, because the seeded users would otherwise close the setup.
 - Clicking a seeded app on the dashboard opens a sample app served by the demo, which signs the visitor in through their instance and shows the claims of the ID token it got.

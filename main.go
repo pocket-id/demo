@@ -272,7 +272,7 @@ type targetKey struct{}
 
 func (s *server) proxySession(w http.ResponseWriter, r *http.Request, id string) {
 	if sess := s.pool.session(id); sess != nil {
-		if r.URL.Path == "/api/signup/setup" && s.handleSetup(w, r, sess) {
+		if s.handleSetup(w, r, sess) {
 			return
 		}
 		s.proxy.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), targetKey{}, sess.target)))

@@ -14,16 +14,24 @@ import (
 // handleSetup answers Pocket ID's initial admin setup until the visitor has signed up, because the seeded users already closed it on the instance
 // It returns false for requests the instance should answer itself
 func (s *server) handleSetup(w http.ResponseWriter, r *http.Request, sess *session) bool {
+	// The instance only sends the landing pages to the setup while it has no users, which the seeded ones prevent
+	landing := r.Method == http.MethodGet && (r.URL.Path == "/" || r.URL.Path == "/login")
+	if !landing && r.URL.Path != "/api/signup/setup" {
+		return false
+	}
+
 	sess.mu.Lock()
 	defer sess.mu.Unlock()
 	if sess.signedUp {
 		return false
 	}
 
-	switch r.Method {
-	case http.MethodGet:
+	switch {
+	case landing:
+		http.Redirect(w, r, "/signup/setup", http.StatusFound)
+	case r.Method == http.MethodGet:
 		w.WriteHeader(http.StatusNoContent)
-	case http.MethodPost:
+	case r.Method == http.MethodPost:
 		// The instance protects its own API against cross-site requests, but this endpoint never reaches it
 		if err := s.csrf.Check(r); err != nil {
 			jsonError(w, http.StatusForbidden, "Cross-origin requests are not allowed.")
