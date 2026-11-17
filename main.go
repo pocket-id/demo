@@ -248,7 +248,7 @@ func (s *server) start(w http.ResponseWriter, r *http.Request) {
 			SameSite: http.SameSiteLaxMode,
 		})
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]string{"url": s.pool.sessionURL(id) + "/setup"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"url": s.pool.sessionURL(id) + "/signup/setup"})
 		return
 	}
 
