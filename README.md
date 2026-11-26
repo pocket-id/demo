@@ -16,17 +16,17 @@ In production, set `BASE_URL` and point DNS for both your host and `*.your-host`
 
 ## Configuration
 
-| Variable              | Default                               | Description                                          |
-| --------------------- | ------------------------------------- | ---------------------------------------------------- |
-| `BASE_URL`            | `http://localhost:8080`               | Public URL of the demo                               |
-| `PORT`                | `8080`                                | Port to listen on                                    |
-| `POCKET_ID_IMAGE`     | `ghcr.io/pocket-id/pocket-id`         | Pocket ID image used for the demos                   |
-| `DOCKER_NETWORK`      | `pocket-id-demo`                      | Docker network shared by the demo and its instances  |
-| `SESSION_DURATION`    | `1h`                                  | How long a demo lives                                |
-| `MAX_SESSIONS`        | `30`                                  | Maximum number of demos running at the same time     |
-| `RATE_LIMIT_DEMOS`    | `5`                                   | Demos an IP can start in a row, `0` turns it off     |
-| `RATE_LIMIT_INTERVAL` | `15m`                                 | How long an IP then waits for each further demo      |
-| `TRUST_PROXY`         | `false`                               | Set to `true` behind a reverse proxy                 |
+| Variable              | Default                                     | Description                                                                                  |
+| --------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `BASE_URL`            | `http://localhost:8080`                     | Public URL of the demo                                                                       |
+| `PORT`                | `8080`                                      | Port to listen on                                                                            |
+| `POCKET_ID_IMAGE`     | `ghcr.io/pocket-id/pocket-id:latest-debian` | Pocket ID image used for the demos, a `-debian` variant because the demo needs a shell in it |
+| `DOCKER_NETWORK`      | `pocket-id-demo`                            | Docker network shared by the demo and its instances                                          |
+| `SESSION_DURATION`    | `1h`                                        | How long a demo lives                                                                        |
+| `MAX_SESSIONS`        | `30`                                        | Maximum number of demos running at the same time                                             |
+| `RATE_LIMIT_DEMOS`    | `5`                                         | Demos an IP can start in a row, `0` turns it off                                             |
+| `RATE_LIMIT_INTERVAL` | `15m`                                       | How long an IP then waits for each further demo                                              |
+| `TRUST_PROXY`         | `false`                                     | Set to `true` behind a reverse proxy                                                         |
 
 ## How it works
 

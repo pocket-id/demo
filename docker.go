@@ -74,7 +74,6 @@ func (p *pool) startInstance(ctx context.Context, id, appURL string, template []
 		},
 		LogConfig:   container.LogConfig{Type: "json-file", Config: map[string]string{"max-size": "10m", "max-file": "1"}},
 		CapDrop:     []string{"ALL"},
-		CapAdd:      []string{"CHOWN", "SETUID", "SETGID"},
 		SecurityOpt: []string{"no-new-privileges"},
 	}
 	if seeding {
@@ -82,9 +81,9 @@ func (p *pool) startInstance(ctx context.Context, id, appURL string, template []
 	} else {
 		// The tmpfs counts against the memory limit, so a visitor can't fill the host's disk with uploads
 		// Docker can't copy into a tmpfs mount, so the template is streamed in by an exec and Pocket ID's own entrypoint only runs once it's there
-		hostConfig.Tmpfs = map[string]string{"/app/data": "size=256m"}
+		hostConfig.Tmpfs = map[string]string{"/app/data": "size=256m,uid=65532,gid=65532"}
 		config.Labels[expiresLabel] = expires.Format(time.RFC3339)
-		config.Entrypoint = []string{"sh", "-c", "until [ -e /app/.ready ]; do sleep 0.1; done; exec sh /app/docker/entrypoint.sh /app/pocket-id"}
+		config.Entrypoint = []string{"sh", "-c", "until [ -e /tmp/.ready ]; do sleep 0.1; done; exec /app/pocket-id"}
 	}
 
 	created, err := p.docker.ContainerCreate(dockerCtx, client.ContainerCreateOptions{Name: "pocket-id-demo-" + id, Config: config, HostConfig: hostConfig})
@@ -166,10 +165,10 @@ func (p *pool) isSignedUp(ctx context.Context, containerID string) (bool, error)
 }
 
 // extract unpacks the template into the container's data directory and signals its entrypoint to continue
-// Owners aren't restored because root has no CAP_DAC_OVERRIDE here, and Pocket ID's entrypoint chowns the directory anyway
+// Owners aren't restored, so the files belong to the image's user that runs the exec
 func (p *pool) extract(ctx context.Context, containerID string, template []byte) error {
 	exec, err := p.docker.ExecCreate(ctx, containerID, client.ExecCreateOptions{
-		Cmd:          []string{"sh", "-c", "tar xo -C /app && touch /app/.ready"},
+		Cmd:          []string{"sh", "-c", "tar xo -C /app && touch /tmp/.ready"},
 		AttachStdin:  true,
 		AttachStdout: true,
 		AttachStderr: true,
